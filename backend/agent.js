@@ -28,7 +28,7 @@ const IGNORED_DIRS = [
 
 const MAX_FILE_CHARS = 12000;
 
-const MODEL_NAME = "openai/gpt-oss-20b";
+const MODEL_NAME = "llama-3.3-70b-versatile";
 
 const SYSTEM_PROMPT = `
 You are a meticulous senior software engineer performing an automated code review.
