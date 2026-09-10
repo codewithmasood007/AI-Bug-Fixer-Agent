@@ -13,8 +13,8 @@ import Terminal from "./components/Terminal";
 import Stats from "./components/Stats";
 import DiffModal from "./components/DiffModal";
 
-const API_BASE = "http://127.0.0.1:8000";
-const WS_URL = "ws://127.0.0.1:8000/ws/scan";
+const API_BASE = "https://ai-bug-fixer-agent.onrender.com";
+const WS_URL = "wss://ai-bug-fixer-agent.onrender.com/ws/scan";
 
 export default function App() {
   const [folderPath, setFolderPath] = useState("");
