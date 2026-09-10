@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -10,11 +9,10 @@ import { runScan } from "./agent.js";
 dotenv.config();
 
 const app = express();
-const PORT = 8000;
+const PORT = process.env.PORT || 8000;
 
 app.use(cors());
 app.use(express.json());
-
 
 app.get("/health", (req, res) => {
     res.json({
@@ -23,48 +21,40 @@ app.get("/health", (req, res) => {
     });
 });
 
-
 app.post("/api/diff", (req, res) => {
+  const { file_path } = req.body;
 
-    const { file_path, folder_path } = req.body;
-    const filePath = path.join(folder_path, file_path);
-    
-    if (!fs.existsSync(filePath)) {
-        return res.json({
-            file: path.basename(filePath),
-            original: "",
-            modified: ""
-        });
-    }
-
-    const modified = fs.readFileSync(filePath, "utf-8");
-
-    const backupPath = filePath + ".bak";
-
-    let original = modified;
-
-    if (fs.existsSync(backupPath)) {
-        original = fs.readFileSync(backupPath, "utf-8");
-    }
-
-    res.json({
-        file: path.basename(filePath),
-        original: original,
-        modified: modified
+  if (!file_path || !fs.existsSync(file_path)) {
+    return res.json({
+      file: file_path ? path.basename(file_path) : "",
+      original: "",
+      modified: "",
     });
+  }
+
+  const modified = fs.readFileSync(file_path, "utf-8");
+  const backupPath = file_path + ".bak";
+  let original = modified;
+
+  if (fs.existsSync(backupPath)) {
+    original = fs.readFileSync(backupPath, "utf-8");
+  }
+
+  res.json({
+    file: path.basename(file_path),
+    original,
+    modified,
+  });
 });
 
-
-const server = app.listen(PORT, "127.0.0.1", () => {
-    console.log(`Server running on http://127.0.0.1:${PORT}`);
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
 });
-
 
 const wss = new WebSocketServer({
     server,
     path: "/ws/scan"
 });
-
 
 wss.on("connection", (ws) => {
 
@@ -97,9 +87,7 @@ wss.on("connection", (ws) => {
             }
 
             for await (const result of runScan(folderPath)) {
-
                 ws.send(JSON.stringify(result));
-
             }
 
             ws.close();
