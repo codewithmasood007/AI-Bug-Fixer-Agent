@@ -20,6 +20,7 @@ export default function App() {
   const [folderPath, setFolderPath] = useState("");
   const [connected, setConnected] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [showDemoHint, setShowDemoHint] = useState(true);
 
   const [logs, setLogs] = useState([]);
   const [patchedFiles, setPatchedFiles] = useState([]);
@@ -35,6 +36,10 @@ export default function App() {
 
   const wsRef = useRef(null);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setShowDemoHint(false), 5000);
+    return () => clearTimeout(timer);
+  }, []);
   useEffect(() => {
     const checkHealth = async () => {
       try {
@@ -114,7 +119,7 @@ export default function App() {
       ws.send(
         JSON.stringify({
           folder_path: folderPath.trim(),
-        })
+        }),
       );
 
       addLog({
@@ -222,15 +227,30 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] text-[#222222]">
+      {showDemoHint && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg border border-indigo-500/30 bg-[#111726] px-4 py-3 shadow-lg">
+          <span className="text-sm text-slate-200">
+            👋 Live demo — type{" "}
+            <code className="rounded bg-indigo-500/10 px-1.5 py-0.5 font-mono text-indigo-300">
+              bugTest
+            </code>{" "}
+            and click Run. Resets to the original buggy code on every scan, so
+            feel free to try it more than once.
+          </span>
+          <button
+            onClick={() => setShowDemoHint(false)}
+            className="text-slate-500 hover:text-slate-300 shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* Header */}
       <header className="border-b border-[#e5e5e5] bg-white px-6 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50">
-              <Bug
-                className="h-5 w-5 text-indigo-600"
-                strokeWidth={1.8}
-              />
+              <Bug className="h-5 w-5 text-indigo-600" strokeWidth={1.8} />
             </div>
 
             <div>
@@ -316,10 +336,7 @@ export default function App() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Terminal */}
           <div className="min-h-[350px]">
-            <Terminal
-              logs={logs}
-              onClear={handleClearLogs}
-            />
+            <Terminal logs={logs} onClear={handleClearLogs} />
           </div>
 
           {/* Fixed Files */}
@@ -371,11 +388,11 @@ export default function App() {
 
       {/* Diff Modal */}
       <DiffModal
-  open={showDiff}
-  onClose={handleCloseDiff}
-  loading={!diffData}
-  diff={diffData}
-/>
+        open={showDiff}
+        onClose={handleCloseDiff}
+        loading={!diffData}
+        diff={diffData}
+      />
     </div>
   );
 }

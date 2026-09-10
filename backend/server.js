@@ -1,3 +1,4 @@
+import fsExtra from "fs";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -15,10 +16,10 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/health", (req, res) => {
-    res.json({
-        status: "online",
-        service: "AI Bug Fixer Backend"
-    });
+  res.json({
+    status: "online",
+    service: "AI Bug Fixer Backend",
+  });
 });
 
 app.post("/api/diff", (req, res) => {
@@ -51,56 +52,70 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
 
+function resetDemoFolder() {
+  const sourceDir = path.join(process.cwd(), "bugTest-source");
+  const demoDir = path.join(process.cwd(), "bugTest");
+
+  if (fs.existsSync(demoDir)) {
+    fs.rmSync(demoDir, { recursive: true, force: true });
+  }
+
+  fs.cpSync(sourceDir, demoDir, { recursive: true });
+}
+
 const wss = new WebSocketServer({
-    server,
-    path: "/ws/scan"
+  server,
+  path: "/ws/scan",
 });
 
 wss.on("connection", (ws) => {
+  ws.on("message", async (message) => {
+    try {
+      const payload = JSON.parse(message.toString());
 
-    ws.on("message", async (message) => {
+      const folderPath = payload.folder_path;
 
-        try {
+      if (!folderPath) {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message: "Folder path is required",
+          }),
+        );
 
-            const payload = JSON.parse(message.toString());
+        ws.close();
+        return;
+      }
 
-            const folderPath = payload.folder_path;
+      if (!fs.existsSync(folderPath)) {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message: `Directory not found: ${folderPath}`,
+          }),
+        );
 
-            if (!folderPath) {
-                ws.send(JSON.stringify({
-                    type: "error",
-                    message: "Folder path is required"
-                }));
+        ws.close();
+        return;
+      }
+      if (folderPath === "bugTest") {
+        resetDemoFolder();
+      }
 
-                ws.close();
-                return;
-            }
+      for await (const result of runScan(folderPath)) {
+        ws.send(JSON.stringify(result));
+      }
 
-            if (!fs.existsSync(folderPath)) {
-                ws.send(JSON.stringify({
-                    type: "error",
-                    message: `Directory not found: ${folderPath}`
-                }));
+      ws.close();
+    } catch (error) {
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: `Unexpected error: ${error.message}`,
+        }),
+      );
 
-                ws.close();
-                return;
-            }
-
-            for await (const result of runScan(folderPath)) {
-                ws.send(JSON.stringify(result));
-            }
-
-            ws.close();
-
-        } catch (error) {
-
-            ws.send(JSON.stringify({
-                type: "error",
-                message: `Unexpected error: ${error.message}`
-            }));
-
-            ws.close();
-        }
-    });
-
+      ws.close();
+    }
+  });
 });
